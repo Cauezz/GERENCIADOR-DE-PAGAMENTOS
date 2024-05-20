@@ -30,12 +30,13 @@
 
         nav {
             margin-bottom: 20px;
+            text-align: center;
         }
 
         nav a {
-            margin: 0 15px;
+            margin: 0 10px;
             text-decoration: none;
-            color: #007BFF;
+            color: #007bff;
             font-weight: bold;
             transition: color 0.3s ease;
         }
@@ -52,6 +53,7 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 600px;
+            box-sizing: border-box;
         }
 
         form {
@@ -66,24 +68,36 @@
         input, select {
             margin-top: 5px;
             padding: 8px;
-            width: calc(100% - 20px);
+            width: calc(100% - 16px);
             border: 1px solid #ccc;
             border-radius: 4px;
+            box-sizing: border-box;
         }
 
         button {
             margin-top: 10px;
             padding: 10px 20px;
-            background-color: #007BFF;
+            background-color: #007bff;
             color: #fff;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            width: 100%;
         }
 
         button:hover {
             background-color: #0056b3;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .button-group button {
+            width: 48%;
         }
 
         ul {
@@ -103,6 +117,22 @@
             font-size: 1.2em;
             text-align: center;
             margin-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            nav a {
+                display: block;
+                margin: 10px 0;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .button-group button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
         }
     </style>
 </head>
@@ -146,8 +176,10 @@
     <section id="generateReport">
         <h2>Gerar Extrato</h2>
         <button id="generateReportBtn">Gerar Extrato</button>
-        <a href="#" id="downloadReportLink" download style="display: none;">Download do Extrato</a>
-        <a href="#" id="sendWhatsAppLink" style="display: none;">Enviar via WhatsApp</a>
+        <div class="button-group" style="display: none;">
+            <button id="downloadReportBtn">Download do Extrato</button>
+            <button id="sendWhatsAppBtn">Enviar via WhatsApp</button>
+        </div>
     </section>
 
     <script>
@@ -160,6 +192,9 @@
             const incomeForm = document.getElementById('incomeForm');
             const billsForm = document.getElementById('billsForm');
             const generateReportBtn = document.getElementById('generateReportBtn');
+            const downloadReportBtn = document.getElementById('downloadReportBtn');
+            const sendWhatsAppBtn = document.getElementById('sendWhatsAppBtn');
+            const buttonGroup = document.querySelector('.button-group');
 
             if (incomeForm) {
                 incomeForm.addEventListener('submit', (e) => {
@@ -197,24 +232,27 @@
                     incomes.forEach(income => {
                         report += `Valor: R$ ${income.amount.toFixed(2)}\n`;
                     });
-                    report
-                    += '\nContas:\n';
+                    report += '\nContas:\n';
                     bills.forEach(bill => {
                         report += `Nome: ${bill.name}, Valor: R$ ${bill.amount.toFixed(2)}, Status: ${bill.status}\n`;
                     });
                     report += `\nData do Extrato: ${new Date().toLocaleDateString()}\n`;
                     report += `\nSaldo Atual: R$ ${(totalIncome - totalExpenses).toFixed(2)}\n`;
 
-                    // Criar e baixar arquivo de texto com o extrato
-                    const blob = new Blob([report], { type: 'text/plain' });
-                    const downloadLink = document.getElementById('downloadReportLink');
-                    downloadLink.href = window.URL.createObjectURL(blob);
-                    downloadLink.click();
+                    // Exibir botões
+                    buttonGroup.style.display = 'flex';
 
-                    // Abrir WhatsApp com o texto do extrato
+                    // Configurar o botão de download
+                    const blob = new Blob([report], { type: 'text/plain' });
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = window.URL.createObjectURL(blob);
+                    downloadLink.download = 'extrato.txt';
+                    downloadReportBtn.onclick = () => downloadLink.click();
+
+                    // Configurar o botão de envio via WhatsApp
                     const whatsappText = encodeURIComponent(report);
                     const whatsappLink = `https://api.whatsapp.com/send?text=${whatsappText}`;
-                    window.open(whatsappLink, '_blank');
+                    sendWhatsAppBtn.onclick = () => window.open(whatsappLink, '_blank');
                 });
             }
         });
@@ -229,7 +267,8 @@
         function updateIncomeList() {
             const incomeList = document.getElementById('incomeList');
             incomeList.innerHTML = '';
-            incomes.forEach((income, index) => {
+            incomes.forEach((income,
+            index) => {
                 const li = document.createElement('li');
                 li.textContent = `Renda ${index + 1}: Valor - R$ ${income.amount.toFixed(2)}`;
                 incomeList.appendChild(li);
