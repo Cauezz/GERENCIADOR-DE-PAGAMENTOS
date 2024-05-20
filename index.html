@@ -110,6 +110,9 @@
             margin: 5px 0;
             padding: 10px;
             border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .saldo {
@@ -148,7 +151,7 @@
         <h2>Adicionar Renda</h2>
         <form id="incomeForm">
             <label for="incomeAmount">Valor da Renda:</label>
-            <input type="number" id="incomeAmount" name="incomeAmount" required>
+            <input type="number" step="0.01" id="incomeAmount" name="incomeAmount" required>
             <button type="submit">Adicionar</button>
         </form>
         <ul id="incomeList"></ul>
@@ -161,7 +164,7 @@
             <label for="billName">Nome da Conta:</label>
             <input type="text" id="billName" name="billName" required>
             <label for="billAmount">Valor:</label>
-            <input type="number" id="billAmount" name="billAmount" required>
+            <input type="number" step="0.01" id="billAmount" name="billAmount" required>
             <label for="billStatus">Status:</label>
             <select id="billStatus" name="billStatus" required>
                 <option value="não paga">Não Paga</option>
@@ -177,7 +180,6 @@
         <h2>Gerar Extrato</h2>
         <button id="generateReportBtn">Gerar Extrato</button>
         <div class="button-group" style="display: none;">
-            <button id="downloadReportBtn">Download do Extrato</button>
             <button id="sendWhatsAppBtn">Enviar via WhatsApp</button>
         </div>
     </section>
@@ -192,69 +194,55 @@
             const incomeForm = document.getElementById('incomeForm');
             const billsForm = document.getElementById('billsForm');
             const generateReportBtn = document.getElementById('generateReportBtn');
-            const downloadReportBtn = document.getElementById('downloadReportBtn');
             const sendWhatsAppBtn = document.getElementById('sendWhatsAppBtn');
             const buttonGroup = document.querySelector('.button-group');
 
-            if (incomeForm) {
-                incomeForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const amount = parseFloat(document.getElementById('incomeAmount').value);
-                    incomes.push({ amount });
-                    totalIncome += amount;
-                    document.getElementById('incomeAmount').value = '';
-                    updateIncomeList();
-                    updateSaldo();
+            incomeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('incomeAmount').value);
+                incomes.push({ amount });
+                totalIncome += amount;
+                document.getElementById('incomeAmount').value = '';
+                updateIncomeList();
+                updateSaldo();
+            });
+
+            billsForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('billName').value;
+                const amount = parseFloat(document.getElementById('billAmount').value);
+                const status = document.getElementById('billStatus').value;
+                bills.push({ name, amount, status });
+                if (status === 'paga') {
+                    totalExpenses += amount;
+                }
+                document.getElementById('billName').value = '';
+                document.getElementById('billAmount').value = '';
+                document.getElementById('billStatus').value = 'não paga';
+                updateBillsList();
+                updateSaldo();
+            });
+
+            generateReportBtn.addEventListener('click', () => {
+                let report = 'Extrato Financeiro\n\nRendas:\n';
+                incomes.forEach(income => {
+                    report += `Valor: R$ ${income.amount.toFixed(2)}\n`;
                 });
-            }
-
-            if (billsForm) {
-                billsForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const name = document.getElementById('billName').value;
-                    const amount = parseFloat(document.getElementById('billAmount').value);
-                    const status = document.getElementById('billStatus').value;
-                    bills.push({ name, amount, status });
-                    if (status === 'paga') {
-                        totalExpenses += amount;
-                    }
-                    document.getElementById('billName').value = '';
-                    document.getElementById('billAmount').value = '';
-                    document.getElementById('billStatus').value = 'não paga';
-                    updateBillsList();
-                    updateSaldo();
+                report += '\nContas:\n';
+                bills.forEach(bill => {
+                    report += `Nome: ${bill.name}, Valor: R$ ${bill.amount.toFixed(2)}, Status: ${bill.status}\n`;
                 });
-            }
+                report += `\nData do Extrato: ${new Date().toLocaleDateString()}\n`;
+                report += `\nSaldo Atual: R$ ${(totalIncome - totalExpenses).toFixed(2)}\n`;
 
-            if (generateReportBtn) {
-                generateReportBtn.addEventListener('click', () => {
-                    let report = 'Extrato Financeiro\n\nRendas:\n';
-                    incomes.forEach(income => {
-                        report += `Valor: R$ ${income.amount.toFixed(2)}\n`;
-                    });
-                    report += '\nContas:\n';
-                    bills.forEach(bill => {
-                        report += `Nome: ${bill.name}, Valor: R$ ${bill.amount.toFixed(2)}, Status: ${bill.status}\n`;
-                    });
-                    report += `\nData do Extrato: ${new Date().toLocaleDateString()}\n`;
-                    report += `\nSaldo Atual: R$ ${(totalIncome - totalExpenses).toFixed(2)}\n`;
+                // Exibir botões
+                buttonGroup.style.display = 'flex';
 
-                    // Exibir botões
-                    buttonGroup.style.display = 'flex';
-
-                    // Configurar o botão de download
-                    const blob = new Blob([report], { type: 'text/plain' });
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = window.URL.createObjectURL(blob);
-                    downloadLink.download = 'extrato.txt';
-                    downloadReportBtn.onclick = () => downloadLink.click();
-
-                    // Configurar o botão de envio via WhatsApp
-                    const whatsappText = encodeURIComponent(report);
-                    const whatsappLink = `https://api.whatsapp.com/send?text=${whatsappText}`;
-                    sendWhatsAppBtn.onclick = () => window.open(whatsappLink, '_blank');
-                });
-            }
+                // Configurar o botão de envio via WhatsApp
+                const whatsappText = encodeURIComponent(report);
+                const whatsappLink = `https://api.whatsapp.com/send?text=${whatsappText}`;
+                sendWhatsAppBtn.onclick = () => window.open(whatsappLink, '_blank');
+            });
         });
 
         function showSection(sectionId) {
@@ -267,10 +255,11 @@
         function updateIncomeList() {
             const incomeList = document.getElementById('incomeList');
             incomeList.innerHTML = '';
-            incomes.forEach((income,
-            index) => {
+            incomes.forEach((income, index) => {
                 const li = document.createElement('li');
-                li.textContent = `Renda ${index + 1}: Valor - R$ ${income.amount.toFixed(2)}`;
+                li.innerHTML = `Renda ${index + 1}: Valor - R$ ${income.amount.toFixed(2)} 
+                <button onclick="editIncome(${index})">Editar</button> 
+                <button onclick="deleteIncome(${index})">Excluir</button>`;
                 incomeList.appendChild(li);
             });
         }
@@ -280,7 +269,9 @@
             billsList.innerHTML = '';
             bills.forEach((bill, index) => {
                 const li = document.createElement('li');
-                li.textContent = `Conta ${index + 1}: Nome - ${bill.name}, Valor - R$ ${bill.amount.toFixed(2)}, Status - ${bill.status}`;
+                li.innerHTML = `Conta ${index + 1}: Nome - ${bill.name}, Valor - R$ ${bill.amount.toFixed(2)}, Status - ${bill.status} 
+                <button onclick="editBill(${index})">Editar</button> 
+                <button onclick="deleteBill(${index})">Excluir</button>`;
                 billsList.appendChild(li);
             });
         }
@@ -290,6 +281,53 @@
             document.getElementById('saldoAtual').textContent = saldoAtual.toFixed(2);
             document.getElementById('saldoAtualBills').textContent = saldoAtual.toFixed(2);
         }
+
+        function editIncome(index) {
+            const amount = prompt('Editar Valor da Renda:', incomes[index].amount);
+            if (amount !== null) {
+                totalIncome -= incomes[index].amount;
+                incomes[index].amount = parseFloat(amount);
+                totalIncome += incomes[index].amount;
+                updateIncomeList();
+                updateSaldo();
+            }
+        }
+
+        function deleteIncome(index) {
+            totalIncome -= incomes[index].amount;
+            incomes.splice(index, 1);
+            updateIncomeList();
+            updateSaldo();
+        }
+
+        function editBill(index) {
+            const name = prompt('Editar Nome da Conta:', bills[index].name);
+            const amount = prompt('Editar Valor da Conta:', bills[index].amount);
+            const status = prompt('Editar Status da Conta (paga/não paga):', bills[index].status);
+            if (name !== null && amount !== null && status !== null) {
+                if (bills[index].status === 'paga') {
+                    totalExpenses -= bills[index].amount;
+                }
+                bills[index].name = name;
+                bills[index].amount = parseFloat(amount);
+                bills[index].status = status;
+                if (status === 'paga') {
+                    totalExpenses += bills[index].amount;
+                }
+                updateBillsList();
+                updateSaldo();
+            }
+        }
+
+        function deleteBill(index) {
+            if (bills[index].status === 'paga') {
+                totalExpenses -= bills[index].amount;
+            }
+            bills.splice(index, 1);
+            updateBillsList();
+            updateSaldo();
+        }
     </script>
 </body>
 </html>
+
