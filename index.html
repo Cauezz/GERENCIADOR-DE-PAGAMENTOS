@@ -122,6 +122,10 @@
             margin-top: 20px;
         }
 
+        .total-pagar {
+            color: red;
+        }
+
         @media (max-width: 600px) {
             nav a {
                 display: block;
@@ -174,6 +178,7 @@
         </form>
         <ul id="billsList"></ul>
         <div class="saldo">Saldo Atual: R$ <span id="saldoAtualBills">0.00</span></div>
+        <div class="saldo total-pagar">Total a Pagar: R$ <span id="totalNaoPago">0.00</span></div>
     </section>
 
     <section id="generateReport">
@@ -187,6 +192,7 @@
     <script>
         let totalIncome = 0;
         let totalExpenses = 0;
+        let totalNaoPago = 0;
         const incomes = [];
         const bills = [];
 
@@ -204,6 +210,7 @@
                 totalIncome += amount;
                 document.getElementById('incomeAmount').value = '';
                 updateIncomeList();
+               
                 updateSaldo();
             });
 
@@ -215,6 +222,8 @@
                 bills.push({ name, amount, status });
                 if (status === 'paga') {
                     totalExpenses += amount;
+                } else {
+                    totalNaoPago += amount;
                 }
                 document.getElementById('billName').value = '';
                 document.getElementById('billAmount').value = '';
@@ -224,14 +233,24 @@
             });
 
             generateReportBtn.addEventListener('click', () => {
-                let report = 'Extrato Financeiro\n\nRendas:\n';
+                let report = 'Extrato Financeiro\n\n';
+                
+                report += 'Rendas:\n';
                 incomes.forEach(income => {
                     report += `Valor: R$ ${income.amount.toFixed(2)}\n`;
                 });
-                report += '\nContas:\n';
-                bills.forEach(bill => {
-                    report += `Nome: ${bill.name}, Valor: R$ ${bill.amount.toFixed(2)}, Status: ${bill.status}\n`;
+                
+                report += '\nContas Pagas:\n';
+                bills.filter(bill => bill.status === 'paga').forEach(bill => {
+                    report += `Nome: ${bill.name}, Valor: R$ ${bill.amount.toFixed(2)}\n`;
                 });
+
+                report += '\nContas Não Pagas:\n';
+                bills.filter(bill => bill.status === 'não paga').forEach(bill => {
+                    report += `Nome: ${bill.name}, Valor: R$ ${bill.amount.toFixed(2)}\n`;
+                });
+
+                report += `\nTotal a Pagar: R$ ${totalNaoPago.toFixed(2)}\n`;
                 report += `\nData do Extrato: ${new Date().toLocaleDateString()}\n`;
                 report += `\nSaldo Atual: R$ ${(totalIncome - totalExpenses).toFixed(2)}\n`;
 
@@ -280,6 +299,7 @@
             const saldoAtual = totalIncome - totalExpenses;
             document.getElementById('saldoAtual').textContent = saldoAtual.toFixed(2);
             document.getElementById('saldoAtualBills').textContent = saldoAtual.toFixed(2);
+            document.getElementById('totalNaoPago').textContent = totalNaoPago.toFixed(2);
         }
 
         function editIncome(index) {
@@ -307,12 +327,17 @@
             if (name !== null && amount !== null && status !== null) {
                 if (bills[index].status === 'paga') {
                     totalExpenses -= bills[index].amount;
+                } else {
+                    totalNaoPago -= bills[index].amount;
                 }
                 bills[index].name = name;
                 bills[index].amount = parseFloat(amount);
                 bills[index].status = status;
-                if (status === 'paga') {
+                if (
+                    status === 'paga') {
                     totalExpenses += bills[index].amount;
+                } else {
+                    totalNaoPago += bills[index].amount;
                 }
                 updateBillsList();
                 updateSaldo();
@@ -322,6 +347,8 @@
         function deleteBill(index) {
             if (bills[index].status === 'paga') {
                 totalExpenses -= bills[index].amount;
+            } else {
+                totalNaoPago -= bills[index].amount;
             }
             bills.splice(index, 1);
             updateBillsList();
@@ -330,4 +357,3 @@
     </script>
 </body>
 </html>
-
